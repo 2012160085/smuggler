@@ -1,4 +1,4 @@
-# HIDE_DATA_IN_IMAGE
+# Tool for hiding data in PNG images
 
-Tool for smuggling data using images.
+You can hide files in PNG pixels.
 
