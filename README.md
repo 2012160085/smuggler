@@ -1,4 +1,3 @@
 # Tool for hiding data in PNG images
 
-You can hide files in PNG pixels.
-
+It splits a file and hides it in insignificant bits of PNG images.
