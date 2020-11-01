@@ -1,6 +1,19 @@
 # Tool for hiding data in PNG images
 
-It splits a file and hides it in insignificant bits of PNG images.
+After splitting the binary file, hide it in the most insignificant bits of the image pixels.
+
+* Usage
+
+  ```python
+  from smuggler import smuggler
+  
+  # smuggler( file name, #bit to modulate, buffer size(byte) )
+  s = smuggler('fileToHide.zip',4,8)
+  s.setImage('original_image.png')
+  s.writeToImg('output_image.png')
+  ```
+
+  
 
 
 | ![original.png](https://github.com/2012160085/smuggler/blob/main/Images/12bit_per_pixel.png?raw=true) | ![24bit_per_pixel.png](https://github.com/2012160085/smuggler/blob/main/Images/24bit_per_pixel.png?raw=true) | ![28bit_per_pixel.png](https://github.com/2012160085/smuggler/blob/main/Images/28bit_per_pixel.png?raw=true) |
