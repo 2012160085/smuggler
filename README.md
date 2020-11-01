@@ -7,7 +7,7 @@ After splitting the binary file, hide it in the most insignificant bits of the i
   ```python
   from smuggler import smuggler
   
-  # smuggler( file name, #bit to modulate, buffer size(byte) )
+  # smuggler( file_name, num_of_bits_to_hide_in_a_byte, buffer_size_in_byte )
   s = smuggler('fileToHide.zip',4,8)
   s.setImage('original_image.png')
   s.writeToImg('output_image.png')
