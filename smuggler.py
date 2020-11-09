@@ -7,8 +7,8 @@ class smuggler:
     def __init__(self,_filename,_modulation=3,_byte_buff_size=4):
         self.modulation = _modulation
         self.byte_buff_size = _byte_buff_size
-        self.bit_buffer = np.array([],dtype=np.uint8)
         self.setFile(_filename)
+        self.bit_buffer = np.unpackbits(np.array(list(self.file_head_bytes),dtype=np.uint8))
         self.calHash = self.getCalHash()
         
     def setFile(self,_filename):
@@ -16,7 +16,8 @@ class smuggler:
         self.file_stream = open(_filename,'rb')  
         self.file_name_bytes = _filename.encode() + (64 - len(_filename.encode()))*bytes([32])
         self.file_size_bytes = os.path.getsize(_filename).to_bytes(8, byteorder="little")
-        self.file_hash_bytes = self.getHash(_filename)     
+        self.file_hash_bytes = self.getHash(_filename)
+        self.file_head_bytes = self.file_name_bytes + self.file_size_bytes + self.file_hash_bytes
         
     def getHash(self,file_name, blocksize=65536):
         afile = open(file_name, 'rb')
@@ -27,9 +28,15 @@ class smuggler:
             buf = afile.read(blocksize)
         afile.close()
         return hasher.digest()      
-        
-    def setImage(self,_imgArr):
-        self.img_array = _imgArr
+
+    def setImageDir(self,directory):
+        basepath = directory
+        aa = list(filter(lambda x: os.path.isfile(os.path.join(basepath, x)) and x.endswith(".png"),os.listdir(basepath)))
+        print(aa)
+    def setImage(self,imageFile):
+        img = Image.open(imageFile)
+        arr = np.array(img)
+        self.img_array = arr
         
     def addBytes(self):
         if not self.file_stream.closed:
@@ -43,7 +50,7 @@ class smuggler:
         
     def calculateByte(self,origin,value,bpp):
         value_int = np.packbits(value)[0]
-        r = origin%bpp #15
+        r = origin%bpp 
         if abs(r-value_int) < bpp/2:
             origin = origin+value_int-r
         else: 
@@ -53,16 +60,18 @@ class smuggler:
         if origin > 255:
             origin = origin - bpp
         return origin
+    
     def getCalHash(self):
-        print("===  Calculating byte hash...")
+        print("Hashing calculation table", end="", flush=True)
         _hash = {}
         for b in range(1,8):
+            print(".", end="", flush=True)
             for i in range(0,256):
                 for j in range(0,2**b):
                     bits = np.unpackbits(np.array([j],dtype=np.uint8))
                     key = tuple([i]+bits.tolist()[-b:])
                     _hash[key] = self.calculateByte(i,bits,2**b)
-        print("===  Completed")
+        print("completed")
         return _hash   
         
     def pickBits(self):
@@ -82,9 +91,11 @@ class smuggler:
                     if len(value) is 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
+        return True
                     
-    def writeToImg(self):
-        self.writeByte()
+    def writeToImages(self):
+        
+        print(self.writeByte())
         return self.img_array
 
 class fence():
