@@ -87,11 +87,11 @@ class smuggler:
         value = self.bit_buffer[:self.modulation]
         self.bit_buffer = self.bit_buffer[self.modulation:]
         return value
-    def statusMsg(self,img_name,time):
-        speed = str(round(self.bytes_written/time,2))
-        remain = str(round((self.file_size - self.bytes_written)/1000))
-        est_time = str(round((self.file_size - self.bytes_written)/(speed*1000)))
-        return '[{img_name}] {remain}kB : {speed}kB/s : {est_time}'
+    def statusMsg(self,img_name,written,time):
+        speed = round(written/time,2)
+        remain = str(round((self.file_size - written)/1000))
+        est_time = str(round((self.file_size - written)/(speed*1000)))
+        return '[{img_name}] {remain}kB : {speed}kB/s : {est_time}'.format(img_name=img_name, remain=remain, speed=speed, est_time=est_time)
     def progressBar(self,count, total, status = ''):
         bar_len = 60
         filled_len = int(round(bar_len * count / float(total)))
@@ -101,15 +101,20 @@ class smuggler:
     def writeByte(self):
         timer = datetime.datetime.now() 
         for i,row in enumerate(self.img_array):
-            if i % 20 == 19:
-                self.progressBar(self.bytes_written + (i+1)*len(row)*4*self.modulation/8000,self.file_size, self.statusMsg(self.img_name,self.time_passed+(timer-datetime.datetime.now()).total_seconds()))
+            if (datetime.datetime.now()-timer).total_seconds() >= 1:
+                self.time_passed = self.time_passed+(datetime.datetime.now()-timer).total_seconds()
+                timer = datetime.datetime.now()
+                now_bytes_written = self.bytes_written + (i+1)*len(row)*4*self.modulation/8
+                now_time_passed = self.time_passed+(datetime.datetime.now()-timer).total_seconds()
+                msg =  self.statusMsg(self.img_name,now_bytes_written,now_time_passed)
+                self.progressBar( now_bytes_written, self.file_size,msg )
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
                     if len(value) is 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
-        self.progressBar(i+1,len(self.img_array),'                                     ')
+      
         self.time_passed = self.time_passed + (datetime.datetime.now() - timer).total_seconds()
         self.bytes_written = self.bytes_written + (i+1)*(j+1)*self.modulation*4/8000
         return True
