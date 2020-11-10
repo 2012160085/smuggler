@@ -30,11 +30,11 @@ class smuggler:
         return hasher.digest()      
 
     def setImageDir(self,directory):
-        basepath = directory
-        aa = list(filter(lambda x: os.path.isfile(os.path.join(basepath, x)) and x.endswith(".png"),os.listdir(basepath)))
-        print(aa)
+        self.basepath = directory
+        self.img_name_list = list(filter(lambda x: os.path.isfile(os.path.join(self.basepath, x)) and x.endswith(".png"),os.listdir(self.basepath)))
+
     def setImage(self,imageFile):
-        img = Image.open(imageFile)
+        img = Image.open(os.path.join(self.basepath, imageFile))
         arr = np.array(img)
         self.img_array = arr
         
@@ -82,21 +82,38 @@ class smuggler:
         value = self.bit_buffer[:self.modulation]
         self.bit_buffer = self.bit_buffer[self.modulation:]
         return value
-        
+    def getProgress(self,progress,updated_progress):
+        if progress != updated_progress:
+            for p_cnt in range(updated_progress-progress):
+                print(".",end="",flush=True)
+        return updated_progress
     def writeByte(self):
+        progress = 0
         for i,row in enumerate(self.img_array):
+            if i % 50 == 0:
+                progress = self.getProgress(progress,round(20 * i / len(self.img_array)))
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
                     if len(value) is 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
+        progress = self.getProgress(progress,round(20 * i / len(self.img_array)))
+        print("completed")
         return True
-                    
+    def saveImageAsName(self,imgName):
+        im = Image.fromarray(self.img_array)
+        im.save(imgName)               
     def writeToImages(self):
-        
-        print(self.writeByte())
-        return self.img_array
+        img_idx = 0
+        while True:
+            self.setImage(self.img_name_list[img_idx % len(self.img_name_list)])
+            print("writing bytes to " + self.img_name_list[img_idx % len(self.img_name_list)],end=" ")
+            need_next_img = self.writeByte()
+            self.saveImageAsName(os.path.join(self.basepath , "smugglers", str(img_idx)+".png"))
+            if not need_next_img:
+                return True;
+            img_idx = img_idx + 1
 
 class fence():
     def readFromImg(self,_image):
