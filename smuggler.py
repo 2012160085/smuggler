@@ -40,6 +40,7 @@ class smuggler:
     def setImage(self,imageFile):
         img = Image.open(os.path.join(self.basepath, imageFile))
         arr = np.array(img)
+        self.img_name = imageFile;
         self.img_array = arr
         
     def addBytes(self):
@@ -100,8 +101,8 @@ class smuggler:
     def writeByte(self):
         timer = datetime.datetime.now() 
         for i,row in enumerate(self.img_array):
-            if i % 10 == 9:
-                self.progressBar(self.bytes_written,self.file_size)
+            if i % 20 == 19:
+                self.progressBar(self.bytes_written + (i+1)*len(row)*4*self.modulation/8000,self.file_size, self.statusMsg(self.img_name,self.time_passed+(timer-datetime.datetime.now()).total_seconds()))
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
