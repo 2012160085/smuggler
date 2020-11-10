@@ -2,6 +2,8 @@ import numpy as np
 import hashlib
 import os
 from PIL import Image
+import datetime
+import sys
 class smuggler:    
 
     def __init__(self,_filename,_modulation=3,_byte_buff_size=4):
@@ -15,10 +17,12 @@ class smuggler:
         self.file_name = _filename
         self.file_stream = open(_filename,'rb')  
         self.file_name_bytes = _filename.encode() + (64 - len(_filename.encode()))*bytes([32])
-        self.file_size_bytes = os.path.getsize(_filename).to_bytes(8, byteorder="little")
+        self.file_size = os.path.getsize(_filename)
+        self.file_size_bytes = self.file_size.to_bytes(8, byteorder="little")
         self.file_hash_bytes = self.getHash(_filename)
         self.file_head_bytes = self.file_name_bytes + self.file_size_bytes + self.file_hash_bytes
-        
+        self.bytes_written = 0
+        self.time_passed = 0
     def getHash(self,file_name, blocksize=65536):
         afile = open(file_name, 'rb')
         hasher = hashlib.md5()
@@ -82,24 +86,31 @@ class smuggler:
         value = self.bit_buffer[:self.modulation]
         self.bit_buffer = self.bit_buffer[self.modulation:]
         return value
-    def getProgress(self,progress,updated_progress):
-        if progress != updated_progress:
-            for p_cnt in range(updated_progress-progress):
-                print(".",end="",flush=True)
-        return updated_progress
+    def statusMsg(self,img_name,time):
+        speed = str(round(self.bytes_written/time,2))
+        remain = str(round((self.file_size - self.bytes_written)/1000))
+        est_time = str(round((self.file_size - self.bytes_written)/(speed*1000)))
+        return '[{img_name}] {remain}kB : {speed}kB/s : {est_time}'
+    def progressBar(self,count, total, status = ''):
+        bar_len = 60
+        filled_len = int(round(bar_len * count / float(total)))
+        percents = round(100.0 * count / float(total), 1)
+        bar = '=' * filled_len + '_' * (bar_len - filled_len)
+        sys.stdout.write('[%s] %s%s    %s\r' % (bar, percents, '%', status))
     def writeByte(self):
-        progress = 0
+        timer = datetime.datetime.now() 
         for i,row in enumerate(self.img_array):
-            if i % 50 == 0:
-                progress = self.getProgress(progress,round(20 * i / len(self.img_array)))
+            if i % 10 == 9:
+                self.progressBar(self.bytes_written,self.file_size)
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
                     if len(value) is 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
-        progress = self.getProgress(progress,round(20 * i / len(self.img_array)))
-        print("completed")
+        self.progressBar(i+1,len(self.img_array),'                                     ')
+        self.time_passed = self.time_passed + (datetime.datetime.now() - timer).total_seconds()
+        self.bytes_written = self.bytes_written + (i+1)*(j+1)*self.modulation*4/8000
         return True
     def saveImageAsName(self,imgName):
         im = Image.fromarray(self.img_array)
@@ -108,15 +119,8 @@ class smuggler:
         img_idx = 0
         while True:
             self.setImage(self.img_name_list[img_idx % len(self.img_name_list)])
-            print("writing bytes to " + self.img_name_list[img_idx % len(self.img_name_list)],end=" ")
             need_next_img = self.writeByte()
             self.saveImageAsName(os.path.join(self.basepath , "smugglers", str(img_idx)+".png"))
             if not need_next_img:
                 return True;
             img_idx = img_idx + 1
-
-class fence():
-    def readFromImg(self,_image):
-        
-        return 
-        
