@@ -12,6 +12,8 @@ class smuggler:
         self.setFile(_filename)
         self.bit_buffer = np.unpackbits(np.array(list(self.file_head_bytes),dtype=np.uint8))
         self.calHash = self.getCalHash()
+        self.time_started = datetime.datetime.now()
+        self.time_latest = datetime.datetime.now()
         
     def setFile(self,_filename):
         self.file_name = _filename
@@ -22,7 +24,7 @@ class smuggler:
         self.file_hash_bytes = self.getHash(_filename)
         self.file_head_bytes = self.file_name_bytes + self.file_size_bytes + self.file_hash_bytes
         self.bytes_written = 0
-        self.time_passed = 0
+
     def getHash(self,file_name, blocksize=65536):
         afile = open(file_name, 'rb')
         hasher = hashlib.md5()
@@ -78,7 +80,13 @@ class smuggler:
                     _hash[key] = self.calculateByte(i,bits,2**b)
         print("completed")
         return _hash   
-        
+    def seconds2hhmmss(self,seconds): 
+        seconds = seconds % (24 * 3600) 
+        hour = seconds // 3600
+        seconds %= 3600
+        minutes = seconds // 60
+        seconds %= 60
+        return "%d:%02d:%02d" % (hour, minutes, seconds)     
     def pickBits(self):
         if self.bit_buffer.size < self.modulation:
             self.addBytes()
@@ -86,42 +94,38 @@ class smuggler:
             return []
         value = self.bit_buffer[:self.modulation]
         self.bit_buffer = self.bit_buffer[self.modulation:]
+        self.bytes_written = self.bytes_written + self.modulation/8
         return value
     def statusMsg(self,img_name,written,time):
-        speed = round(written/time,2)
+        speed = round(0.001*written/time,2)
         remain = str(round((self.file_size - written)/1000))
-        est_time = str(round((self.file_size - written)/(speed*1000)))
-        return '[{img_name}] {remain}kB : {speed}kB/s : {est_time}'.format(img_name=img_name, remain=remain, speed=speed, est_time=est_time)
+        est_time = str(self.seconds2hhmmss(round((self.file_size - written)/(speed*1000))))
+        return '[{img_name}] {speed}kB/s : {est_time}                     '.format(img_name=img_name, speed=speed, est_time=est_time)
     def progressBar(self,count, total, status = ''):
-        bar_len = 60
+        bar_len = 40
         filled_len = int(round(bar_len * count / float(total)))
         percents = round(100.0 * count / float(total), 1)
-        bar = '=' * filled_len + '_' * (bar_len - filled_len)
-        sys.stdout.write('[%s] %s%s    %s\r' % (bar, percents, '%', status))
+        bar = '>' * filled_len + '_' * (bar_len - filled_len)
+        sys.stdout.write('%s kB [%s] %s%s %s\r' % (str(round((self.file_size-self.bytes_written)/1000)),bar, percents, '%', status))
     def writeByte(self):
-        timer = datetime.datetime.now() 
         for i,row in enumerate(self.img_array):
-            if (datetime.datetime.now()-timer).total_seconds() >= 1:
-                self.time_passed = self.time_passed+(datetime.datetime.now()-timer).total_seconds()
-                timer = datetime.datetime.now()
-                now_bytes_written = self.bytes_written + (i+1)*len(row)*4*self.modulation/8
-                now_time_passed = self.time_passed+(datetime.datetime.now()-timer).total_seconds()
-                msg =  self.statusMsg(self.img_name,now_bytes_written,now_time_passed)
-                self.progressBar( now_bytes_written, self.file_size,msg )
+            now_time_passed = (datetime.datetime.now()-self.time_started).total_seconds()
+            if (datetime.datetime.now()-self.time_latest).total_seconds() >= 1:
+                self.time_latest = datetime.datetime.now()
+                msg =  self.statusMsg(self.img_name,self.bytes_written,now_time_passed)
+                self.progressBar( self.bytes_written, self.file_size,msg )
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
                     if len(value) is 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
-      
-        self.time_passed = self.time_passed + (datetime.datetime.now() - timer).total_seconds()
-        self.bytes_written = self.bytes_written + (i+1)*(j+1)*self.modulation*4/8000
         return True
     def saveImageAsName(self,imgName):
         im = Image.fromarray(self.img_array)
         im.save(imgName)               
     def writeToImages(self):
+        self.time_started = datetime.datetime.now()
         img_idx = 0
         while True:
             self.setImage(self.img_name_list[img_idx % len(self.img_name_list)])
