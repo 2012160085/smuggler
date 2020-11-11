@@ -1,4 +1,4 @@
-from smuggler import smuggler
+from smuggler2 import smuggler
 import os
 
 # smuggler( file_name, num_of_bits_to_hide_in_a_byte, buffer_size_in_byte )
