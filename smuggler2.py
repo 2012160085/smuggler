@@ -43,9 +43,9 @@ class smuggler:
         img = Image.open(os.path.join(self.basepath, imageFile))
         arr = np.array(img)
         self.img_name = imageFile;
-        self.img_array = arr
-        self.img_space = len(self.img_array) * len(self.img_array[0]) * 4 * self.modulation
-        
+        self.img_array = arr.reshape(len(arr),len(arr[0]),4,1)
+        self.img_space = len(arr) * len(arr[0]) * 4 * self.modulation
+        print(self.img_space)
     def addBytes(self):
         if not self.file_stream.closed:
             _bytes = bytearray(self.file_stream.read(1+self.img_space//8))
@@ -89,7 +89,7 @@ class smuggler:
         seconds %= 60
         return "%d:%02d:%02d" % (hour, minutes, seconds)     
     def pickBits(self):
-        if self.bit_buffer.size < self.modulation:
+        if self.bit_buffer.size < self.img_space:
             self.addBytes()
         if self.bit_buffer.size == 0 :
             return []
@@ -112,9 +112,13 @@ class smuggler:
     
     def searchHashTable(self,key):
         return self.calHash[key]
-    def 
+    def tuplify(self,nplist,hash_func):
+        return hash_func[tuple(nplist.tolist())]
     def writeByte(self):
-        value_matrix = np.apply_over_axes(,)
+        timer = datetime.datetime.now()
+        value = np.concatenate((self.img_array, self.pickBits()),axis=3)
+        value_tuple = np.apply_along_axis(self.tuplify,3,value,self.calHash)
+        print((datetime.datetime.now()-timer).total_seconds())
         for i,row in enumerate(self.img_array):
             now_time_passed = (datetime.datetime.now()-self.time_started).total_seconds()
             if (datetime.datetime.now()-self.time_latest).total_seconds() >= 1:
