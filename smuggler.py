@@ -10,14 +10,21 @@ import string
 class smuggler:    
 
     def __init__(self,_filename,_modulation=3,_byte_buff_size=4):
+        print("\n"*100)
+        self.log_level = 5
+        self.printLog("INFO", "init smuggler" ,3)
+        self.calHash = self.getCalHash()
+        
         self.modulation = _modulation
         self.byte_buff_size = _byte_buff_size
         self.setFile(_filename)
         self.bit_buffer = np.unpackbits(np.array(list(self.file_head_bytes),dtype=np.uint8))
-        self.calHash = self.getCalHash()
+        
         self.time_started = datetime.datetime.now()
         self.time_latest = datetime.datetime.now()
         self.img_order = 0
+        
+        
 
     def setFile(self,_filename):
         self.file_name = _filename
@@ -30,7 +37,11 @@ class smuggler:
         self.file_size_include_meta = self.file_size + 88
         self.folder_name = self.file_name + ".smg"
         self.bytes_written = 0
-
+        self.printLog("INFO", "file stream loaded: " + _filename ,3)
+        self.printLog("DBUG", "file_name " + self.file_name,3)
+        self.printLog("DBUG", "file_size " + str(self.file_size) +" B",3)
+        self.printLog("DBUG", "file_hash " + str(self.file_hash_bytes),3)
+        self.printLog("DBUG", "file header created " + str(self.file_head_bytes),3)
     def setOrderBitsToBuffer(self):
         bits = np.unpackbits(np.array(list(self.img_order.to_bytes(4, byteorder="little")),dtype=np.uint8))
         self.bit_buffer = np.append(bits,self.bit_buffer)
@@ -52,6 +63,7 @@ class smuggler:
         self.img_name_list = list(filter(lambda x: os.path.isfile(os.path.join(self.basepath, x)) and x.endswith(".png"),os.listdir(self.basepath)))
 
     def setImage(self,imageFile):
+        self.printLog("INFO", "setting image " + imageFile ,2)
         img = Image.open(os.path.join(self.basepath, imageFile))
         arr = np.array(img)
         self.img_name = imageFile;
@@ -82,16 +94,16 @@ class smuggler:
         return origin
     
     def getCalHash(self):
-        print("Hashing calculation table", end="", flush=True)
+        self.printLog("DBUG","hashing calculation table..",3)
         _hash = {}
         for b in range(1,8):
-            print(".", end="", flush=True)
+            self.printLog("DBUG","mod" + str(b) + " hashed",4)
             for i in range(0,256):
                 for j in range(0,2**b):
                     bits = np.unpackbits(np.array([j],dtype=np.uint8))
                     key = tuple([i]+bits.tolist()[-b:])
                     _hash[key] = self.calculateByte(i,bits,2**b)
-        print("completed\n")
+        self.printLog("DBUG","hash table created",4)
         return _hash   
     def seconds2hhmmss(self,seconds): 
         seconds = seconds % (24 * 3600) 
@@ -109,13 +121,18 @@ class smuggler:
         self.bit_buffer = self.bit_buffer[self.modulation:]
         self.bytes_written = self.bytes_written + self.modulation/8
         return value
+    def skippedText(self,txt,lim = 16):
+        if len(txt) > lim and len(txt) > 3 + (lim//3) * 2  :
+            txt = txt[:lim//3] + "..." + txt[-lim//3:]
+        else:
+            txt = txt + ' '*(lim-len(txt))
+        return txt
     def statusMsg(self,img_name,written,time):
         speed = round(0.001*written/time,2)
         remain = str(round((self.file_size_include_meta - written)/1000))
         est_time = str(self.seconds2hhmmss(round((self.file_size_include_meta)/(speed*1000))))
         elps_time = str(self.seconds2hhmmss(time))
-        return '{img_name:<10} {speed:>6}kB/s : elapsed [{elps_time:>8} / {est_time:<8}]'.format(
-                img_name='['+img_name+']',
+        return ' {speed:>6}kB/s : elapsed [{elps_time:>8} / {est_time:<8}]'.format(
                 speed=speed,
                 est_time=est_time,
                 elps_time=elps_time)
@@ -135,7 +152,7 @@ class smuggler:
             for j,pixel in enumerate(row):
                 for k,c in enumerate(pixel):
                     value = self.pickBits()
-                    if len(value) is 0:
+                    if len(value) == 0:
                         return False 
                     self.img_array[i][j][k] = self.calHash[tuple([c]+value.tolist())]
         return True
@@ -146,9 +163,14 @@ class smuggler:
         self.ensure_dir(save_path)
         im = Image.fromarray(self.img_array)
         im.save(os.path.join(save_path ,imgName))            
+        status = "image saved at " + os.path.join(save_path ,imgName) 
+        self.printLog("INFO",status,1)
 
+    def printLog(self,tag,msg,level,nl = '\n'):
+        if level <= self.log_level:
+            print ("["+tag+"] " + self.skippedText(msg,lim=110),end=nl,flush=True)
     def writeToImages(self):
-        print("smuggling",self.file_name,"....")
+        
         self.time_started = datetime.datetime.now()
         img_idx = 0
         while True:
@@ -159,9 +181,10 @@ class smuggler:
                 now_time_passed = (datetime.datetime.now()-self.time_started).total_seconds()
                 msg =  self.statusMsg(self.img_name,self.bytes_written,now_time_passed)
                 self.progressBar( self.bytes_written, self.file_size_include_meta,msg )
-                input("\njob finished.. press any key to exit")
+                input("\n\n\n     jobs finished.. press any key to exit\n\n\n\n")
                 return True;
             img_idx = img_idx + 1
     def ensure_dir(self,file_path):
         if not os.path.exists(file_path):
+            self.printLog("INFO", "directory " + file_path + " created" ,3)
             os.makedirs(file_path)
