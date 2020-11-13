@@ -63,7 +63,7 @@ class smuggler:
         self.img_name_list = list(filter(lambda x: os.path.isfile(os.path.join(self.basepath, x)) and x.endswith(".png"),os.listdir(self.basepath)))
 
     def setImage(self,imageFile):
-        self.printLog("INFO", "setting image " + imageFile ,2)
+        self.printLog("INFO", "writting to image [" + imageFile + "]",2)
         img = Image.open(os.path.join(self.basepath, imageFile))
         arr = np.array(img)
         self.img_name = imageFile;
@@ -145,7 +145,7 @@ class smuggler:
     def writeByte(self):
         for i,row in enumerate(self.img_array):
             now_time_passed = (datetime.datetime.now()-self.time_started).total_seconds()
-            if (datetime.datetime.now()-self.time_latest).total_seconds() >= 0.3:
+            if (datetime.datetime.now()-self.time_latest).total_seconds() >= 0.05:
                 self.time_latest = datetime.datetime.now()
                 msg =  self.statusMsg(self.img_name,self.bytes_written,now_time_passed)
                 self.progressBar( self.bytes_written, self.file_size_include_meta,msg )
@@ -163,7 +163,7 @@ class smuggler:
         self.ensure_dir(save_path)
         im = Image.fromarray(self.img_array)
         im.save(os.path.join(save_path ,imgName))            
-        status = "image saved at " + os.path.join(save_path ,imgName) 
+        status = 'image saved at "' + os.path.join(save_path ,imgName ) + '"' 
         self.printLog("INFO",status,1)
 
     def printLog(self,tag,msg,level,nl = '\n'):
