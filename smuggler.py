@@ -33,6 +33,7 @@ class smuggler:
         self.file_size = os.path.getsize(_filename)
         self.file_size_bytes = self.file_size.to_bytes(8, byteorder="little")
         self.file_hash_bytes = self.getHash(_filename)
+        input(len(self.file_hash_bytes))
         self.file_head_bytes = self.file_name_bytes + self.file_size_bytes + self.file_hash_bytes
         self.file_size_include_meta = self.file_size + 88
         self.folder_name = self.file_name + ".smg"
