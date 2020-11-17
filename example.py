@@ -1,12 +1,11 @@
 from smuggler import smuggler
 from fence import fence
-import os
 
-# smuggler( file_name, num_of_bits_to_hide_in_a_byte, buffer_size_in_byte )
-
-s = smuggler("tkde1.pdf",6,8)
-s.setImageDir("Images")
+# hide file in png images
+s = smuggler("FileZilla_3.49.1_win64-setup.exe",6,8) #file to hide
+s.setImageDir("demo") #directory where png images are
 s.writeToImages()
 
-f = fence("Images/tkde1.pdf.smg",6)
+# get file from png images
+f = fence("demo\\FileZilla_3.49.1_win64-setup.exe.smg",6) #d
 f.writeFile()

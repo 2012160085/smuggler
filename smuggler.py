@@ -33,7 +33,6 @@ class smuggler:
         self.file_size = os.path.getsize(_filename)
         self.file_size_bytes = self.file_size.to_bytes(8, byteorder="little")
         self.file_hash_bytes = self.getHash(_filename)
-        input(len(self.file_hash_bytes))
         self.file_head_bytes = self.file_name_bytes + self.file_size_bytes + self.file_hash_bytes
         self.file_size_include_meta = self.file_size + 88
         self.folder_name = self.file_name + ".smg"
@@ -130,6 +129,8 @@ class smuggler:
         return txt
     def statusMsg(self,img_name,written,time):
         speed = round(0.001*written/time,2)
+        if speed == 0:
+            return
         remain = str(round((self.file_size_include_meta - written)/1000))
         est_time = str(self.seconds2hhmmss(round((self.file_size_include_meta)/(speed*1000))))
         elps_time = str(self.seconds2hhmmss(time))
@@ -182,7 +183,7 @@ class smuggler:
                 now_time_passed = (datetime.datetime.now()-self.time_started).total_seconds()
                 msg =  self.statusMsg(self.img_name,self.bytes_written,now_time_passed)
                 self.progressBar( self.bytes_written, self.file_size_include_meta,msg )
-                input("\n\n\n     jobs finished.. press any key to exit\n\n\n\n")
+                input("\n\n\n     jobs finished.. press any key to exit ")
                 return True;
             img_idx = img_idx + 1
     def ensure_dir(self,file_path):

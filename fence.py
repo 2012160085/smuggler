@@ -15,8 +15,10 @@ class fence:
         self.setImageDir(directory)
         self.bits_buffer = []
         self.bytes_buffer = np.array([],dtype=np.uint8)
+
     def setImageDir(self,directory):
         self.basepath = directory
+        self.ensure_dir(os.path.join(self.basepath,'result'))
         self.img_name_list = list(filter(lambda x: os.path.isfile(os.path.join(self.basepath, x)) 
                                                    and x.endswith(".png")
                                         ,os.listdir(self.basepath)
@@ -73,11 +75,21 @@ class fence:
 
     def writeFile(self,buffer_size = 65536):
         idx = 0
-        while idx < len(self.image_dict):
+        
+        while True:
             if len(self.bits_buffer) < buffer_size:
+                if idx == len(self.image_dict):
+                    return
                 self.readImage(idx)
+                if idx == 0:
+                    oFile = open(os.path.join(self.basepath,'result',self.file_name), "wb")
+                idx = idx + 1       
             self._packBitsBuffer(buffer_size)
-            oFile = open(os.path.join(self.basepath,'result',self.file_name), "wb")
             oFile.write(bytearray(self.bytes_buffer))
-            self.packBitsBuffer = np.array([],dtype=np.uint8)
-            idx = idx + 1
+            self.bytes_buffer = np.array([],dtype=np.uint8)
+        oFile.write(bytearray(self.bytes_buffer))
+        oFile.close()
+        
+    def ensure_dir(self,file_path):
+        if not os.path.exists(file_path):
+            os.makedirs(file_path)            
